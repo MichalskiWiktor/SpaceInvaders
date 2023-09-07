@@ -13,10 +13,11 @@ pygame.init()
 
 class Player(object):
     image = pygame.image.load("assets\\pixel_ship_yellow.png").convert_alpha()
+    size = 50
 
     def __init__(self):
         self.position = 0
-        self.image = pygame.transform.scale(self.image, (50, 50))
+        self.image = pygame.transform.scale(self.image, (Player.size, Player.size))
 
     def handle_keys(self):
         key = pygame.key.get_pressed()
@@ -31,6 +32,7 @@ class Player(object):
 
 class Enemy:
     speed = 10
+    size = 50
     direction = "right"
     standard_position_y = 0
     
@@ -40,18 +42,21 @@ class Enemy:
         self.points = points
         self.is_alive = is_alive
         self.image = image
-        self.image = pygame.transform.scale(self.image, (50, 50))
+        self.image = pygame.transform.scale(self.image, (Enemy.size, Enemy.size))
 
     def change_position(self):
-        if Enemy.direction=="left" and self.position_x>0:
+        if Enemy.direction=="left":
             self.position_x-=Enemy.speed
-        elif Enemy.direction=="right" and self.position_x<560:
+        else:
             self.position_x+=Enemy.speed
-        elif Enemy.direction=="right":
-            Enemy.direction="left"
+    
+    @classmethod
+    def change_level(cls, side):
+        if side == "left":
+            Enemy.direction="right" 
             Enemy.standard_position_y +=25
         else:
-            Enemy.direction="right"
+            Enemy.direction="left"
             Enemy.standard_position_y +=25
 
     def draw(self, surface):
@@ -67,15 +72,15 @@ def get_enemy(position_x, position_y, points, img):
     return Enemy(position_x, position_y, points, True, img)
 
 enemy_rows = []
-enemy_rows.append([get_enemy(i, 100, 75, imgs[0]) for i in range(0, 400, 50)])
+enemy_rows.append([get_enemy(i, 50, 75, imgs[0]) for i in range(0, 400, 50)])
+enemy_rows.append([get_enemy(i, 100, 50, imgs[1]) for i in range(0, 400, 50)])
 enemy_rows.append([get_enemy(i, 150, 50, imgs[1]) for i in range(0, 400, 50)])
-enemy_rows.append([get_enemy(i, 200, 50, imgs[1]) for i in range(0, 400, 50)])
+enemy_rows.append([get_enemy(i, 200, 25, imgs[2]) for i in range(0, 400, 50)])
 enemy_rows.append([get_enemy(i, 250, 25, imgs[2]) for i in range(0, 400, 50)])
-enemy_rows.append([get_enemy(i, 300, 25, imgs[2]) for i in range(0, 400, 50)])
 
 player = Player()
 MOVE_OBJECT_EVENT = pygame.USEREVENT + 1
-pygame.time.set_timer(MOVE_OBJECT_EVENT, 700)  # 1000 milliseconds = 1 second
+pygame.time.set_timer(MOVE_OBJECT_EVENT, 700)
 
 # Game Loop
 while True:
@@ -84,14 +89,17 @@ while True:
             pygame.quit()
             sys.exit()
         elif event.type == MOVE_OBJECT_EVENT:
+            # update direction of movement
             for enemies in enemy_rows:
-                if enemies[-1].position_x == 560 and Enemy.direction == "right":
-                    enemies[-1].change_position()
-                elif enemies[0].position_x == 0 and Enemy.direction == "left":
-                    enemies[0].change_position()
-                else:    
-                    for enemy in enemies:
-                        enemy.change_position()
+                if enemies[-1].position_x >= 560 and Enemy.direction == "right":
+                    Enemy.change_level("right")
+                elif enemies[0].position_x <= 0 and Enemy.direction == "left":
+                    Enemy.change_level("left")
+
+            # move all enemies in the same direction
+            for enemies in enemy_rows:
+                for enemy in enemies:
+                    enemy.change_position()
     
     screen.blit(bg_image, (0, 0))
     for enemies in enemy_rows:
