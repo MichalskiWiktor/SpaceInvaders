@@ -1,17 +1,16 @@
-import pygame, sys
+import pygame
+import sys
 
-#######Game Basic Setting#########
-screen = pygame.display.set_mode((600, 600))
+# Game Basic Setting
+screen = pygame.display.set_mode((610, 600))
 pygame.display.set_caption("Space Invaders")
-background_image = pygame.image.load("assets\\background-black.png")
-background_image = pygame.transform.scale(background_image, (600, 600))
+bg_image = pygame.image.load("assets\\background-black.png")
+bg_image = pygame.transform.scale(bg_image, (610, 600))
 clock = pygame.time.Clock()
 pygame.init()
+#Klasy: Bullet, Laser, Enemy, Barier
 
-#Klasy: Bullet, Laser, Enemy
 
-
-#########Player - Ship##################
 class Player(object):
     image = pygame.image.load("assets\\pixel_ship_yellow.png").convert_alpha()
 
@@ -29,65 +28,75 @@ class Player(object):
     def draw(self, surface):
        surface.blit(self.image, (self.position, 500))
 
-#########Enemy###########
 
 class Enemy:
     speed = 10
     direction = "right"
-    def __init__(self, positionX, positionY, points, isAlive, image):
-        self.positionX = positionX
-        self.positionY = positionY
+    standard_position_y = 0
+    
+    def __init__(self, position_x, position_y, points, is_alive, image):
+        self.position_x = position_x
+        self.position_y = position_y
         self.points = points
-        self.isAlive = isAlive
+        self.is_alive = is_alive
         self.image = image
         self.image = pygame.transform.scale(self.image, (50, 50))
 
     def change_position(self):
-        if Enemy.direction=="left" and self.positionX>0:
-           self.positionX-=Enemy.speed
-        elif Enemy.direction=="right" and self.positionX<550:
-           self.positionX+=Enemy.speed
+        if Enemy.direction=="left" and self.position_x>0:
+            self.position_x-=Enemy.speed
+        elif Enemy.direction=="right" and self.position_x<560:
+            self.position_x+=Enemy.speed
         elif Enemy.direction=="right":
-           Enemy.direction="left"
-           self.positionY +=25
+            Enemy.direction="left"
+            Enemy.standard_position_y +=25
         else:
             Enemy.direction="right"
-            self.positionY +=25
+            Enemy.standard_position_y +=25
 
     def draw(self, surface):
-       surface.blit(self.image, (self.positionX, self.positionY))
-
+       surface.blit(self.image, (self.position_x, (self.position_y + Enemy.standard_position_y)))
 
 
 imgs = [pygame.image.load("assets\\pixel_ship_red_small.png").convert_alpha(), 
         pygame.image.load("assets\\pixel_ship_green_small.png").convert_alpha(),
         pygame.image.load("assets\\pixel_ship_blue_small.png").convert_alpha(),
         pygame.image.load("assets\\pixel_ship_yellow.png").convert_alpha()]
-#positionX, positionY, points, isAlive, image
-enemies = ((0, 100, 25, True, imgs[0]),
-   (50, 100, 25, True, imgs[1]),
-   (100, 100, 25, True, imgs[2]),
-   (150, 100, 25, True, imgs[0]),
-   (200, 100, 25, True, imgs[1]),
-   (250, 100, 25, True, imgs[2]),)
-x = [Enemy(*options) for options in enemies]
+
+def get_enemy(position_x, position_y, points, img):
+    return Enemy(position_x, position_y, points, True, img)
+
+enemy_rows = []
+enemy_rows.append([get_enemy(i, 100, 75, imgs[0]) for i in range(0, 400, 50)])
+enemy_rows.append([get_enemy(i, 150, 50, imgs[1]) for i in range(0, 400, 50)])
+enemy_rows.append([get_enemy(i, 200, 50, imgs[1]) for i in range(0, 400, 50)])
+enemy_rows.append([get_enemy(i, 250, 25, imgs[2]) for i in range(0, 400, 50)])
+enemy_rows.append([get_enemy(i, 300, 25, imgs[2]) for i in range(0, 400, 50)])
+
 player = Player()
 MOVE_OBJECT_EVENT = pygame.USEREVENT + 1
-pygame.time.set_timer(MOVE_OBJECT_EVENT, 800)  # 1000 milliseconds = 1 second
+pygame.time.set_timer(MOVE_OBJECT_EVENT, 700)  # 1000 milliseconds = 1 second
 
-#########Game Loop#############
+# Game Loop
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
         elif event.type == MOVE_OBJECT_EVENT:
-            for enemy in x:
-                enemy.change_position()
+            for enemies in enemy_rows:
+                if enemies[-1].position_x == 560 and Enemy.direction == "right":
+                    enemies[-1].change_position()
+                elif enemies[0].position_x == 0 and Enemy.direction == "left":
+                    enemies[0].change_position()
+                else:    
+                    for enemy in enemies:
+                        enemy.change_position()
     
-    screen.blit(background_image, (0, 0))
-    for enemy in x:
-        enemy.draw(screen)
+    screen.blit(bg_image, (0, 0))
+    for enemies in enemy_rows:
+        for enemy in enemies:
+            enemy.draw(screen)
     player.draw(screen)
     player.handle_keys()
     
