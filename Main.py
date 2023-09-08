@@ -20,14 +20,15 @@ class Player(object):
         self.position = 0
         self.image = pygame.transform.scale(self.image, (Player.size, Player.size))
 
-    def handle_keys(self, surface):
+    def handle_keys(self):
         key = pygame.key.get_pressed()
         if key[pygame.K_LEFT] or key[pygame.K_a] and self.position>0:
            self.position-=5
         if key[pygame.K_RIGHT] or key[pygame.K_d] and self.position<550:
            self.position+=5
         if key[pygame.K_SPACE]:
-            Player.laser = Laser(self.position, 450)
+            if Player.laser is None:
+                Player.laser = Laser(self.position, 450)
 
     def draw(self, surface):
        surface.blit(self.image, (self.position, 500))
@@ -49,9 +50,12 @@ class Enemy:
 
     def change_position(self):
         if Enemy.direction=="left":
-            self.position_x-=Enemy.speed
+            self.position_x -= Enemy.speed
         else:
-            self.position_x+=Enemy.speed
+            self.position_x += Enemy.speed
+    
+    def get_position_y(self):
+        return self.position_y + Enemy.standard_position_y
     
     @classmethod
     def change_level(cls, side):
@@ -74,9 +78,21 @@ class Laser:
         self.image = pygame.transform.scale(self.image, (50, 50))
         self.position_x = position_x
         self.position_y = position_y
-    
+    #https://www.techwithtim.net/tutorials/game-development-with-python/pygame-tutorial/pygame-collision
     def change_position(self):
-        self.position_y -= 20
+        for enemies in enemy_rows:
+            for enemy in enemies:
+                if enemy.get_position_y == self.position_y and enemy.position_x == self.position_x:
+                    enemy.is_alive = False
+                    self.is_alive = False
+                    enemies.pop(enemies.index(enemy))
+                    print("dead")
+                    pass
+
+        if self.position_y <= 0 or self.is_alive == False:
+            Player.laser = None
+        else:
+            self.position_y -= 20
     
     def draw(self, surface):
        surface.blit(self.image, (self.position_x, self.position_y))
@@ -123,17 +139,18 @@ while True:
                     enemy.change_position()
         # move player laser
         elif event.type == MOVE_PLAYER_LASER_EVENT:
-            if Player.laser is not None:
+            if Player.laser is not None and Player.laser.is_alive == True:
                 Player.laser.change_position()
 
     screen.blit(bg_image, (0, 0))
     for enemies in enemy_rows:
         for enemy in enemies:
-            enemy.draw(screen)
+            if enemy.is_alive == True:
+                enemy.draw(screen)
     player.draw(screen)
-    if Player.laser is not None:
+    if Player.laser is not None and Player.laser.is_alive == True:
         Player.laser.draw(screen)
-    player.handle_keys(screen)
+    player.handle_keys()
     
     pygame.display.update()
     clock.tick(50)
