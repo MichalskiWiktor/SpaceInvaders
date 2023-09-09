@@ -101,6 +101,7 @@ class Laser:
         self.position_x = position_x
         self.position_y = position_y
         self.vel = 20
+        self.mask = pygame.mask.from_surface(self.image) 
 
     def draw(self, surface):
         surface.blit(self.image, (self.position_x, self.position_y))
@@ -133,7 +134,7 @@ player = Player(300, 500, 50, 50, 5)
 MOVE_PLAYER_EVENT = pygame.USEREVENT + 1
 MOVE_PLAYER_LASER_EVENT = pygame.USEREVENT + 2
 pygame.time.set_timer(MOVE_PLAYER_EVENT, 700)
-pygame.time.set_timer(MOVE_PLAYER_LASER_EVENT, 150)
+pygame.time.set_timer(MOVE_PLAYER_LASER_EVENT, 100)
 
 # Game Loop
 while True:
@@ -158,9 +159,20 @@ while True:
                 for enemy in enemies:
                     enemy.change_position()
         elif event.type == MOVE_PLAYER_LASER_EVENT:
-            if player.laser != None:
-                if player.laser.position_y - player.laser.vel >= 0:
-                    player.laser.move()
+            if player.laser is not None: # Does Laser exist
+                if player.laser.position_y - player.laser.vel >= 0: # If the Laser is out of the Map
+                    loop_escape = False
+                    for enemies in enemy_rows:
+                        for enemy in enemies:
+                            if player.laser.collision(enemy) == True: # Does the laser collide with any enemy
+                                enemies.pop(enemies.index(enemy))
+                                player.laser = None
+                                loop_escape = True
+                                break
+                        if loop_escape:
+                            break
+                    if player.laser is not None:
+                        player.laser.move()
                 else:
                     player.laser.out_of_scrren()
 
