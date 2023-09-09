@@ -32,7 +32,12 @@ class Ship():
     
     def draw(self, surface):
         surface.blit(self.ship_image, (self.position_x, self.position_y))
+        if self.laser is not None:
+            self.laser.draw(surface)
 
+    def shoot(self):
+        if self.laser is None:
+            self.laser = Laser(self.position_x, self.position_y - 50, self.laser_image)
     def get_width(self):
         return self.ship_image.get_width()
     
@@ -44,8 +49,9 @@ class Player(Ship):
 
     def __init__(self, position_x, position_y, width, height, vel):
         super().__init__(position_x, position_y, width, height, vel)
-        self.ship_image = pygame.image.load("assets\\pixel_ship_yellow.png").convert_alpha()
-        self.ship_image = pygame.transform.scale(self.ship_image, (self.width, self.height))
+        self.ship_image = pygame.transform.scale(YELLOW_SHIP, (self.width, self.height))
+        self.laser_image = pygame.transform.scale(YELLOW_LASER, (self.width, self.height))
+        self.mask = pygame.mask.from_surface(self.ship_image) 
 
     def handle_keys(self):
         key = pygame.key.get_pressed()
@@ -53,6 +59,8 @@ class Player(Ship):
            self.position_x-=self.vel
         if key[pygame.K_RIGHT] or key[pygame.K_d] and self.position_x + self.width + self.vel < 600:
            self.position_x+=self.vel
+        if key[pygame.K_SPACE]:
+           self.shoot()
 
 
 class Enemy(Ship):
@@ -68,6 +76,8 @@ class Enemy(Ship):
         self.ship_image, self.laser_image = self.group_colors_map[color]
         self.ship_image = pygame.transform.scale(self.ship_image, (self.width, self.height))
         self.direction = "right"
+        # Masks allow us to better check if the objects collide with each other
+        self.mask = pygame.mask.from_surface(self.ship_image) 
 
     def change_position(self):
         if self.direction=="left":
@@ -85,6 +95,30 @@ class Enemy(Ship):
         self.direction = direction
 
 
+class Laser:
+    def __init__(self, position_x, position_y, image):
+        self.image = pygame.transform.scale(image, (50, 50))
+        self.position_x = position_x
+        self.position_y = position_y
+        self.vel = 20
+
+    def draw(self, surface):
+        surface.blit(self.image, (self.position_x, self.position_y))
+
+    def move(self):
+        self.position_y -= self.vel
+
+    def out_of_scrren(self):
+        player.laser = None
+
+    def collision(self, obj):
+        return collide(obj, self)
+
+def collide(obj1, obj2):
+    offset_x = obj2.position_x - obj1.position_x
+    offset_y = obj2.position_y - obj1.position_y
+    return obj1.mask.overlap(obj2.mask, (offset_x, offset_y)) != None
+
 def get_enemy(position_x, position_y, width, height, vel, points, color):
     return Enemy(position_x, position_y, width, height, vel, points, color)
 
@@ -97,7 +131,9 @@ enemy_rows.append([get_enemy(i, 250, 50, 50, 15, 25, "blue") for i in range(0, 4
 
 player = Player(300, 500, 50, 50, 5)
 MOVE_PLAYER_EVENT = pygame.USEREVENT + 1
+MOVE_PLAYER_LASER_EVENT = pygame.USEREVENT + 2
 pygame.time.set_timer(MOVE_PLAYER_EVENT, 700)
+pygame.time.set_timer(MOVE_PLAYER_LASER_EVENT, 150)
 
 # Game Loop
 while True:
@@ -121,6 +157,14 @@ while True:
             for enemies in enemy_rows:
                 for enemy in enemies:
                     enemy.change_position()
+        elif event.type == MOVE_PLAYER_LASER_EVENT:
+            if player.laser != None:
+                if player.laser.position_y - player.laser.vel >= 0:
+                    player.laser.move()
+                else:
+                    player.laser.out_of_scrren()
+
+
 
     screen.blit(bg_image, (0, 0))
     for enemies in enemy_rows:
