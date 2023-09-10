@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+pygame.font.init()
 # Lasers
 BLUE_LASER = pygame.image.load("assets\\pixel_laser_blue.png")
 GREEN_LASER = pygame.image.load("assets\\pixel_laser_green.png")
@@ -13,6 +14,7 @@ RED_SHIP = pygame.image.load("assets\\pixel_ship_red_small.png")
 YELLOW_SHIP = pygame.image.load("assets\\pixel_ship_yellow.png")
 
 # Game Basic Setting
+main_font = pygame.font.SysFont("comicsans", 25)
 screen = pygame.display.set_mode((600, 600))
 pygame.display.set_caption("Space Invaders")
 bg_image = pygame.image.load("assets\\background-black.png")
@@ -52,7 +54,8 @@ class Player(Ship):
         self.ship_image = pygame.transform.scale(YELLOW_SHIP, (self.width, self.height))
         self.laser_image = pygame.transform.scale(YELLOW_LASER, (self.width, self.height))
         self.mask = pygame.mask.from_surface(self.ship_image) 
-        self.lifes = 3
+        self.lives = 3
+        self.score = 0
 
     def handle_keys(self):
         key = pygame.key.get_pressed()
@@ -145,9 +148,19 @@ while True:
             sys.exit()
         elif event.type == CREATE_ENEMY_LASER_EVENT:
             random_row = random.choice(enemy_rows)
-            enemy = random.choice(random_row)
-            enemy.shoot(50)
+            if len(random_row) != 0:
+                enemy = random.choice(random_row)
+                enemy.shoot(50)
         elif event.type == MOVE_ENEMY_EVENT:  # Player Event
+
+            # Check if there are any enemies 
+            if len(enemy_rows) == 0:
+                print("win")
+            else:
+                for enemies in enemy_rows:
+                    if len(enemies) == 0:
+                        enemy_rows.pop(enemy_rows.index(enemies))
+
             # update direction of movement
             # Double list comprehension to see 
             # if any enemy touches the right side of window and 
@@ -172,13 +185,14 @@ while True:
             for enemies in enemy_rows:
                 for enemy in enemies:
                     enemy.change_position()
+
         elif event.type == MOVE_ENEMY_LASER_EVENT:
             for enemies in enemy_rows:
                 for enemy in enemies:
                     if enemy.laser is not None: # Does Laser exist
                         if enemy.laser.position_y + enemy.laser.vel <= 600: # If the Laser is out of the Map
                             if enemy.laser.collision(player) == True: # Does the laser collide with any enemy
-                                player.lifes-=1
+                                player.lives-=1
                                 print("atak")
                                 enemy.laser = None
                             if enemy.laser is not None:
@@ -192,6 +206,7 @@ while True:
                         for enemies in enemy_rows:
                             for enemy in enemies:
                                 if player.laser.collision(enemy) == True: # Does the laser collide with any enemy
+                                    player.score += enemy.points
                                     enemies.pop(enemies.index(enemy))
                                     player.laser = None
                                     loop_escape = True
@@ -203,8 +218,11 @@ while True:
                     else:
                         player.laser = None
 
-
     screen.blit(bg_image, (0, 0))
+    lives_label = main_font.render(f"Lives: {player.lives}", 1, (255, 255, 255))
+    score_label = main_font.render(f"Score: {player.score}", 1, (255, 255, 255))
+    screen.blit(lives_label, (500, 10))
+    screen.blit(score_label, (11, 10))
     for enemies in enemy_rows:
         for enemy in enemies:
             enemy.draw(screen)
