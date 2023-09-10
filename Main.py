@@ -46,7 +46,6 @@ class Ship():
 
 
 class Player(Ship):
-
     def __init__(self, position_x, position_y, width, height, vel):
         super().__init__(position_x, position_y, width, height, vel)
         self.ship_image = pygame.transform.scale(YELLOW_SHIP, (self.width, self.height))
@@ -64,35 +63,33 @@ class Player(Ship):
 
 
 class Enemy(Ship):
+    group_direction = "right"
     group_colors_map = {
                         "red": (RED_SHIP, RED_LASER),
                         "green": (GREEN_SHIP, GREEN_LASER),
                         "blue": (BLUE_SHIP, BLUE_LASER)
-                        }
+    }
     
     def __init__(self, position_x, position_y, width, height, vel, points, color):
         super().__init__(position_x, position_y, width, height, vel)
         self.points = points
         self.ship_image, self.laser_image = self.group_colors_map[color]
         self.ship_image = pygame.transform.scale(self.ship_image, (self.width, self.height))
-        self.direction = "right"
+        Enemy.group_direction = "right"
         # Masks allow us to better check if the objects collide with each other
         self.mask = pygame.mask.from_surface(self.ship_image) 
 
     def change_position(self):
-        if self.direction=="left":
+        if Enemy.group_direction=="left":
             self.position_x -= self.vel
         else:
             self.position_x += self.vel
 
     def change_level(self):
-        if self.direction == "left":
+        if Enemy.group_direction == "left":
             self.position_y += 25
         else:
             self.position_y += 25
-    
-    def change_direction(self, direction):
-        self.direction = direction
 
 
 class Laser:
@@ -134,7 +131,7 @@ player = Player(300, 500, 50, 50, 5)
 MOVE_PLAYER_EVENT = pygame.USEREVENT + 1
 MOVE_PLAYER_LASER_EVENT = pygame.USEREVENT + 2
 pygame.time.set_timer(MOVE_PLAYER_EVENT, 700)
-pygame.time.set_timer(MOVE_PLAYER_LASER_EVENT, 100)
+pygame.time.set_timer(MOVE_PLAYER_LASER_EVENT, 75)
 
 # Game Loop
 while True:
@@ -144,14 +141,23 @@ while True:
             sys.exit()
         elif event.type == MOVE_PLAYER_EVENT:  # Player Event
             # update direction of movement
-            for enemies in enemy_rows:
-                if enemies[-1].position_x + enemies[-1].width + enemies[-1].vel>= 600 and enemies[-1].direction == "right":
+            # Double list comprehension to see 
+            # if any enemy touches the right side of window and 
+            # if yes then we change level and directrion of movment
+            if any(Enemy.group_direction == "right" and 
+                   enemy.position_x + enemy.width + enemy.vel>= 600 
+                   for enemies in enemy_rows for enemy in enemies):
+                Enemy.group_direction = "left"
+                change_enemies_level()
+            elif any(Enemy.group_direction == "left" and 
+                   enemy.position_x <= 0 
+                   for enemies in enemy_rows for enemy in enemies):
+               Enemy.group_direction = "right"
+               change_enemies_level()
+            
+            def change_enemies_level():
+                for enemies in enemy_rows:
                     for enemy in enemies:
-                        enemy.change_direction("left")
-                        enemy.change_level()
-                elif enemies[0].position_x <= 0 and enemies[0].direction == "left":
-                    for enemy in enemies:
-                        enemy.change_direction("right")
                         enemy.change_level()
 
             # move all enemies in the same direction
@@ -175,7 +181,6 @@ while True:
                         player.laser.move()
                 else:
                     player.laser.out_of_scrren()
-
 
 
     screen.blit(bg_image, (0, 0))
